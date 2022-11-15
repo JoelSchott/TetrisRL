@@ -27,7 +27,13 @@ def test_random(n: int, display: bool = False) -> List[float]:
 def main():
     set_seed(42)
     data_sample_path = os.path.join(os.getcwd(), 'data', 'stratified_random_samples_low.tet')
-    sample.gather_stratified_samples(500, 500, 20, 10, 5, data_sample_path)
+    samples = sample.load_samples(data_sample_path)
+    print(f'Found {len(samples)} samples')
+    for s in samples:
+        tetris_display.print_board(s[0])
+        tetris_display.print_board(s[1])
+        print(s[2])
+        print('=' * 40)
     return
     Q_estimation = deep_rl.train(10000, 1, 0.1, 0.99, 10, 20, 0.95, 1000)
     game, total_reward = deep_rl.test(Q_estimation)
