@@ -4,8 +4,10 @@ from typing import Tuple, List
 
 from tetris import Tetris, Board
 
+Sample = Tuple[Board, Board, float]
 
-def save_samples(samples: List[Tuple[Board, Board, float]], file_path: str):
+
+def save_samples(samples: List[Sample], file_path: str):
     with open(file_path, 'wb') as f:
         pickle.dump(samples, f)
 
@@ -16,7 +18,7 @@ def load_samples(file_path: str):
     return samples
 
 
-def gather_random_samples(n: int, rows: int, cols: int, file_path: str):
+def gather_random_samples(n: int, rows: int, cols: int) -> List[Sample]:
     samples = []
     game = Tetris(rows, cols)
     while len(samples) < n:
@@ -27,10 +29,10 @@ def gather_random_samples(n: int, rows: int, cols: int, file_path: str):
         samples.append((state, game.get_state(), reward))
         if game.is_done():
             game = Tetris(rows, cols)
-    save_samples(samples, file_path)
+    return samples
 
 
-def gather_stratified_samples(num_reward: int, num_no_reward: int, rows: int, cols: int, max_height: int, file_path: str):
+def gather_stratified_samples(num_reward: int, num_no_reward: int, rows: int, cols: int, max_height: int) -> List[Sample]:
     reward_samples = []
     no_reward_samples = []
     game = Tetris(rows, cols)
@@ -53,4 +55,4 @@ def gather_stratified_samples(num_reward: int, num_no_reward: int, rows: int, co
             game = Tetris(rows, cols)
     samples = reward_samples + no_reward_samples
     random.shuffle(samples)
-    save_samples(samples, file_path)
+    return samples

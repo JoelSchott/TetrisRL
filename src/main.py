@@ -1,16 +1,16 @@
 from typing import List
 import random
-import torch
-import os
+import torch as T
 
 import deep_rl
 import tetris_display
 import sample
+from replay_memory import ReplayMemory, StratifiedReplayMemory
 
 
 def set_seed(seed: int):
     random.seed(seed)
-    torch.manual_seed(seed)
+    T.manual_seed(seed)
 
 
 def test_random(n: int, display: bool = False) -> List[float]:
@@ -24,20 +24,34 @@ def test_random(n: int, display: bool = False) -> List[float]:
     return total_rewards
 
 
-def main():
-    set_seed(42)
-    data_sample_path = os.path.join(os.getcwd(), 'data', 'stratified_random_samples_low.tet')
-    samples = sample.load_samples(data_sample_path)
-    print(f'Found {len(samples)} samples')
+def display_samples(sample_path: str):
+    samples = sample.load_samples(sample_path)
     for s in samples:
         tetris_display.print_board(s[0])
         tetris_display.print_board(s[1])
         print(s[2])
         print('=' * 40)
-    return
-    Q_estimation = deep_rl.train(10000, 1, 0.1, 0.99, 10, 20, 0.95, 1000)
+    print(f'Found {len(samples)} samples')
+
+
+def main():
+    set_seed(42)
+    n_episodes = 100000
+    epsilon_max = 1
+    epsilon_min = 0.1
+    epsilon_decay = 0.9995
+    reset_steps = 200
+    batch_size = 20
+    gamma = 0.99
+    memory = ReplayMemory(capacity=1000)
+    samples = sample.load_samples('data/standard_random_samples.tet')
+    memory.include_samples(samples)
+    lr = 0.1
+    Q_estimation = deep_rl.train(n_episodes, epsilon_max, epsilon_min, epsilon_decay, reset_steps,
+                                 batch_size, gamma, memory, lr)
+    T.save(Q_estimation, 'data/11_15_train_from_scratch.nn')
     game, total_reward = deep_rl.test(Q_estimation)
-    print(f'Total reward: {total_reward}')
+    print(f'Total reward after training: {total_reward}')
     tetris_display.show(game.archive)
 
 
