@@ -1,6 +1,6 @@
 import torch as T
 from collections import deque
-from typing import TypedDict, List, Deque, Literal, Union
+from typing import TypedDict, List, Deque, Literal, Union, Tuple
 import random
 
 from sample import Sample
@@ -32,9 +32,9 @@ class ReplayMemory:
 
 
 class StratifiedReplayMemory:
-    def __init__(self, reward_capacity: int, no_reward_capacity: int):
-        self.reward_memory = deque([], maxlen=reward_capacity)
-        self.no_reward_memory = deque([], maxlen=no_reward_capacity)
+    def __init__(self, capacity: Tuple[int, int]):
+        self.reward_memory = deque([], maxlen=capacity[0])
+        self.no_reward_memory = deque([], maxlen=capacity[1])
 
     def store(self, state: T.Tensor, new_state: T.Tensor, reward: float):
         replay = {'state': state, 'new_state': new_state, 'reward': reward}
@@ -46,13 +46,13 @@ class StratifiedReplayMemory:
     def full(self) -> bool:
         return len(self.reward_memory) == self.reward_memory.maxlen and len(self.no_reward_memory) == self.no_reward_memory.maxlen
 
-    def get_batch(self, reward_batch_size, no_reward_batch_size) -> List[Replay]:
-        batch = random.sample(self.reward_memory, reward_batch_size) + random.sample(self.no_reward_memory, no_reward_batch_size)
+    def get_batch(self, batch_sizes: Tuple[int, int]) -> List[Replay]:
+        batch = random.sample(self.reward_memory, batch_sizes[0]) + random.sample(self.no_reward_memory, batch_sizes[1])
         random.shuffle(batch)
         return batch
 
-    def can_sample(self, reward_batch_size: int, no_reward_batch_size: int):
-        return len(self.reward_memory) >= reward_batch_size and len(self.no_reward_memory) >= no_reward_batch_size
+    def can_sample(self, batch_sizes: Tuple[int, int]):
+        return len(self.reward_memory) >= batch_sizes[0] and len(self.no_reward_memory) >= batch_sizes[1]
 
     def include_samples(self, samples: List[Sample]):
         for sample in samples:
