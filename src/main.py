@@ -121,4 +121,12 @@ def main(args: Dict[str, Any]):
 
 
 if __name__ == '__main__':
-    main(parse_args())
+    #main(parse_args())
+    import sample
+    import deep_rl
+    import time
+    model = deep_rl.DeepQNetwork()
+    start_time = time.time()
+    samples = sample.collect_samples_using_model(12000, model, 0.05, 200, 6, 10)
+    end_time = time.time()
+    print(f'collected 12000 samples in {end_time - start_time} seconds using 10 processes')

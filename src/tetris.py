@@ -2,6 +2,8 @@ from typing import List, Tuple
 import random
 from copy import deepcopy
 
+from common import ROWS
+
 # rows x cols, top to bottom, left to right
 Board = List[List[bool]]
 
@@ -110,8 +112,8 @@ class TTetromino:
 
 
 class SavedGame:
-    def __init__(self, first_tetromino: int):
-        self.tetrominos: List[int] = [first_tetromino]
+    def __init__(self):
+        self.tetrominos: List[int] = []
         self.actions: List[int] = []
 
     def add(self, tetromino: int, action: int):
@@ -126,8 +128,9 @@ class Tetris:
         self.board: Board = [[False for _ in range(cols)] for _ in range(rows)]
         self.tetrominos = [ITetromino, OTetromino, LTetromino, JTetromino, STetromino, ZTetromino, TTetromino]
         self.next: int = self._calculate_next()
-        self.actions, self.rewards = self._calculate_actions()
-        self.archive = SavedGame(self.next)
+        self.actions, self.rewards, self.are_terminal = self._calculate_actions()
+        self.archive = SavedGame()
+        self.done = False
 
     def get_next(self):
         return self.next
@@ -138,41 +141,48 @@ class Tetris:
     def get_actions(self) -> List[Board]:
         return self.actions
 
+    def get_are_terminal(self) -> List[bool]:
+        return self.are_terminal
+
+    def is_done(self) -> bool:
+        return self.done
+
     def take_action(self, action: int) -> float:
         self.board = self.actions[action]
+        self.done = self.are_terminal[action]
         reward = self.rewards[action]
 
         self.next = self._calculate_next()
-        self.actions, self.rewards = self._calculate_actions()
+        self.actions, self.rewards, self.are_terminal = self._calculate_actions()
         self.archive.add(self.next, action)
 
         return reward
 
-    def is_done(self) -> bool:
-        return len(self.actions) == 0
-
     def _calculate_next(self) -> int:
         return random.randrange(len(self.tetrominos))
 
-    def _calculate_actions(self) -> Tuple[List[Board], List[float]]:
+    def _calculate_actions(self) -> Tuple[List[Board], List[float], List[bool]]:
         actions = []
         rewards = []
+        are_terminal = []
         for t in self.tetrominos[self.next].get_tetrominos():
             for drop in range(self.cols - t.cols + 1):
                 next_row = 0
                 while self._can_drop(t, drop, next_row):
                     next_row += 1
-                # make sure the tetromino can fit
-                if next_row >= t.rows:
-                    action = deepcopy(self.board)
-                    for t_row in range(t.rows):
-                        for t_col in range(t.cols):
-                            if t.shape[t_row][t_col]:
-                                action[next_row - t.rows + t_row][drop + t_col] = 1
-                    rows_cleared = clear_filled_rows(action)
-                    rewards.append(score(rows_cleared))
-                    actions.append(action)
-        return actions, rewards
+
+                action = deepcopy(self.board)
+                for t_row in range(t.rows):
+                    for t_col in range(t.cols):
+                        if t.shape[t_row][t_col]:
+                            row_to_fill = next_row - t.rows + t_row
+                            if row_to_fill >= 0:
+                                action[row_to_fill][drop + t_col] = 1
+                rows_cleared = clear_filled_rows(action)
+                rewards.append(score(rows_cleared))
+                actions.append(action)
+                are_terminal.append(next_row < t.rows)
+        return actions, rewards, are_terminal
 
     def _can_drop(self, t: Tetromino, col: int, next_row: int) -> bool:
         if next_row == self.rows:
@@ -213,3 +223,10 @@ def score(rows_cleared: int) -> float:
     if rows_cleared == 4:
         return 0.8
     return 0
+
+
+def over_height(board: Board, height: int) -> bool:
+    for row in range(ROWS - height):
+        if sum(board[row]) > 0:
+            return True
+    return False

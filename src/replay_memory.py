@@ -11,14 +11,15 @@ class Replay(TypedDict):
     state: T.Tensor
     new_state: T.Tensor
     reward: float
+    terminal: bool
 
 
 class ReplayMemory:
     def __init__(self, capacity: int):
         self.memory: Deque[Replay] = deque([], maxlen=capacity)
 
-    def store(self, state: T.Tensor, new_state: T.Tensor, reward: float):
-        self.memory.append({'state': state, 'new_state': new_state, 'reward': reward})
+    def store(self, state: T.Tensor, new_state: T.Tensor, reward: float, terminal: bool):
+        self.memory.append({'state': state, 'new_state': new_state, 'reward': reward, 'terminal': terminal})
 
     def get_batch(self, batch_size: int) -> List[Replay]:
         return random.sample(self.memory, batch_size)
@@ -33,11 +34,11 @@ class ReplayMemory:
 
 class StratifiedReplayMemory:
     def __init__(self, capacity: Tuple[int, int]):
-        self.reward_memory = deque([], maxlen=capacity[0])
-        self.no_reward_memory = deque([], maxlen=capacity[1])
+        self.reward_memory: Deque[Replay] = deque([], maxlen=capacity[0])
+        self.no_reward_memory: Deque[Replay] = deque([], maxlen=capacity[1])
 
-    def store(self, state: T.Tensor, new_state: T.Tensor, reward: float):
-        replay = {'state': state, 'new_state': new_state, 'reward': reward}
+    def store(self, state: T.Tensor, new_state: T.Tensor, reward: float, terminal: bool):
+        replay = {'state': state, 'new_state': new_state, 'reward': reward, 'terminal': terminal}
         if reward > 0:
             self.reward_memory.append(replay)
         else:
@@ -75,6 +76,10 @@ def get_batch_new_states(batch: List[Replay]) -> T.Tensor:
 
 def get_batch_rewards(batch: List[Replay]) -> T.Tensor:
     return T.tensor([replay['reward'] for replay in batch])
+
+
+def get_batch_terminals(batch: List[Replay]) -> T.tensor:
+    return T.tensor([replay['terminal'] for replay in batch])
 
 
 def board_to_tensor(board: Union[Board, List[Board]]) -> T.Tensor:
